@@ -116,6 +116,11 @@ GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN))
 GOLANGCI_LINT_PKG := github.com/golangci/golangci-lint/cmd/golangci-lint
 
+KEPLOY_VER := v0.7.7
+KEPLOY_BIN := server
+KEPLOY := $(abspath $(TOOLS_BIN_DIR)/$(KEPLOY_BIN)-$(KEPLOY_VER))
+KEPLOY_PKG := go.keploy.io/server/cmd/server
+
 # CRD_OPTIONS define options to add to the CONTROLLER_GEN
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
@@ -302,6 +307,10 @@ prepare-local-clusterctl: manifests kustomize cluster-templates ## Prepare overi
 	cp ./templates/cluster-template*.yaml ~/.cluster-api/overrides/infrastructure-nutanix/${LOCAL_PROVIDER_VERSION}/
 	cp ./clusterctl.yaml ~/.cluster-api/clusterctl.yaml
 
+.PHONY: run-keploy
+run-keploy: $(KEPLOY)
+	$(KEPLOY) run
+
 .PHONY: test-unittest
 test-unittest: manifests generate fmt vet setup-envtest ## Run unit tests.
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION)  --arch=amd64 -p path)" go test ./... -coverprofile cover.out
@@ -473,6 +482,13 @@ $(KPROMO):
 
 $(GOLANGCI_LINT): # Build golangci-lint from tools folder
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(GOLANGCI_LINT_PKG) $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)
+
+.PHONY: $(KEPLOY_BIN)
+$(KEPLOY_BIN): $(KEPLOY) ## Build a local copy of keploy
+
+.PHONY: $(KEPLOY)
+$(KEPLOY): # Build keploy from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(KEPLOY_PKG) $(KEPLOY_BIN) $(KEPLOY_VER)
 
 ## --------------------------------------
 ## Lint / Verify
