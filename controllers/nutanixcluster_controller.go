@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	//"reflect"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +49,8 @@ import (
 
 // NutanixClusterReconciler reconciles a NutanixCluster object
 type NutanixClusterReconciler struct {
+	prismClientWrapper nutanixClient.PrismClientWrapperInterface
+
 	Client            client.Client
 	SecretInformer    coreinformers.SecretInformer
 	ConfigMapInformer coreinformers.ConfigMapInformer
@@ -59,10 +59,11 @@ type NutanixClusterReconciler struct {
 
 func NewNutanixClusterReconciler(client client.Client, secretInformer coreinformers.SecretInformer, configMapInformer coreinformers.ConfigMapInformer, scheme *runtime.Scheme) *NutanixClusterReconciler {
 	return &NutanixClusterReconciler{
-		Client:            client,
-		SecretInformer:    secretInformer,
-		ConfigMapInformer: configMapInformer,
-		Scheme:            scheme,
+		prismClientWrapper: nutanixClient.NewNutanixClientWrapper(secretInformer, configMapInformer),
+		Client:             client,
+		SecretInformer:     secretInformer,
+		ConfigMapInformer:  configMapInformer,
+		Scheme:             scheme,
 	}
 }
 
@@ -174,7 +175,7 @@ func (r *NutanixClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	conditions.MarkTrue(cluster, infrav1.CredentialRefSecretOwnerSetCondition)
 
-	v3Client, err := CreateNutanixClient(r.SecretInformer, r.ConfigMapInformer, cluster)
+	v3Client, err := r.prismClientWrapper.GetClientFromEnvironment(cluster)
 	if err != nil {
 		conditions.MarkFalse(cluster, infrav1.PrismCentralClientCondition, infrav1.PrismCentralClientInitializationFailed, capiv1.ConditionSeverityError, err.Error())
 		return ctrl.Result{Requeue: true}, fmt.Errorf("nutanix client error: %v", err)

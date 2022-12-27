@@ -29,7 +29,6 @@ import (
 	"github.com/nutanix-cloud-native/prism-go-client/utils"
 	nutanixClientV3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	"k8s.io/apimachinery/pkg/api/resource"
-	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -39,16 +38,6 @@ const (
 	taskSucceededMessage = "SUCCEEDED"
 	serviceNamePECluster = "AOS"
 )
-
-// CreateNutanixClient creates a new Nutanix client from the environment
-func CreateNutanixClient(secretInformer coreinformers.SecretInformer, cmInformer coreinformers.ConfigMapInformer, nutanixCluster *infrav1.NutanixCluster) (*nutanixClientV3.Client, error) {
-	helper, err := nutanixClientHelper.NewNutanixClientHelper(secretInformer, cmInformer)
-	if err != nil {
-		klog.Errorf("error creating nutanix client helper: %v", err)
-		return nil, err
-	}
-	return helper.GetClientFromEnvironment(nutanixCluster)
-}
 
 // DeleteVM deletes a VM and is invoked by the NutanixMachineReconciler
 func DeleteVM(ctx context.Context, client *nutanixClientV3.Client, vmName, vmUUID string) (string, error) {

@@ -42,7 +42,7 @@ func WaitForTaskCompletion(ctx context.Context, conn *nutanixClientV3.Client, uu
 }
 
 func waitForState(errCh chan<- error, target string, refresh stateRefreshFunc) {
-	err := Retry(2, 2, 0, func(_ uint) (bool, error) {
+	err := retry(2, 2, 0, func(_ uint) (bool, error) {
 		state, err := refresh()
 		if err != nil {
 			return false, err
@@ -77,23 +77,23 @@ func GetTaskState(ctx context.Context, client *nutanixClientV3.Client, taskUUID 
 	return taskStatus, nil
 }
 
-// RetryableFunc performs an action and returns a bool indicating whether the
+// retryableFunc performs an action and returns a bool indicating whether the
 // function is done, or if it should keep retrying, and an error which will
-// abort the retry and be returned by the Retry function. The 0-indexed attempt
+// abort the retry and be returned by the retry function. The 0-indexed attempt
 // is passed with each call.
-type RetryableFunc func(uint) (bool, error)
+type retryableFunc func(uint) (bool, error)
 
 /*
-Retry retries a function up to numTries times with exponential backoff.
+retry retries a function up to numTries times with exponential backoff.
 If numTries == 0, retry indefinitely.
-If interval == 0, Retry will not delay retrying and there will be no
+If interval == 0, retry will not delay retrying and there will be no
 exponential backoff.
 If maxInterval == 0, maxInterval is set to +Infinity.
 Intervals are in seconds.
 Returns an error if initial > max intervals, if retries are exhausted, or if the passed function returns
 an error.
 */
-func Retry(initialInterval float64, maxInterval float64, numTries uint, function RetryableFunc) error {
+func retry(initialInterval float64, maxInterval float64, numTries uint, function retryableFunc) error {
 	if maxInterval == 0 {
 		maxInterval = math.Inf(1)
 	} else if initialInterval < 0 || initialInterval > maxInterval {
@@ -110,14 +110,14 @@ func Retry(initialInterval float64, maxInterval float64, numTries uint, function
 		}
 
 		if !done {
-			// Retry after delay. Calculate next delay.
+			// retry after delay. Calculate next delay.
 			time.Sleep(time.Duration(interval) * time.Second)
 			interval = math.Min(interval*2, maxInterval)
 		}
 	}
 
 	if !done {
-		return fmt.Errorf("Function never succeeded in Retry")
+		return fmt.Errorf("Function never succeeded in retry")
 	}
 	return nil
 }

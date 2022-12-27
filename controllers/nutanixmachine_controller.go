@@ -72,6 +72,9 @@ func init() {
 // NutanixMachineReconciler reconciles a NutanixMachine object
 type NutanixMachineReconciler struct {
 	client.Client
+
+	prismClientWrapper nutanixClient.PrismClientWrapperInterface
+
 	SecretInformer    coreinformers.SecretInformer
 	ConfigMapInformer coreinformers.ConfigMapInformer
 	Scheme            *runtime.Scheme
@@ -79,10 +82,11 @@ type NutanixMachineReconciler struct {
 
 func NewNutanixMachineReconciler(client client.Client, secretInformer coreinformers.SecretInformer, configMapInformer coreinformers.ConfigMapInformer, scheme *runtime.Scheme) *NutanixMachineReconciler {
 	return &NutanixMachineReconciler{
-		Client:            client,
-		SecretInformer:    secretInformer,
-		ConfigMapInformer: configMapInformer,
-		Scheme:            scheme,
+		prismClientWrapper: nutanixClient.NewNutanixClientWrapper(secretInformer, configMapInformer),
+		Client:             client,
+		SecretInformer:     secretInformer,
+		ConfigMapInformer:  configMapInformer,
+		Scheme:             scheme,
 	}
 }
 
@@ -205,12 +209,12 @@ func (r *NutanixMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Fetch the NutanixCluster
-	ntxCluster := &infrav1.NutanixCluster{}
+	ntnxCluster := &infrav1.NutanixCluster{}
 	nclKey := client.ObjectKey{
 		Namespace: cluster.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
-	err = r.Client.Get(ctx, nclKey, ntxCluster)
+	err = r.Client.Get(ctx, nclKey, ntnxCluster)
 	if err != nil {
 		klog.Infof("%s Waiting for NutanixCluster: %v", logPrefix, err)
 		return reconcile.Result{}, nil
@@ -223,7 +227,7 @@ func (r *NutanixMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	v3Client, err := CreateNutanixClient(r.SecretInformer, r.ConfigMapInformer, ntxCluster)
+	v3Client, err := r.prismClientWrapper.GetClientFromEnvironment(ntnxCluster)
 	if err != nil {
 		conditions.MarkFalse(ntxMachine, infrav1.PrismCentralClientCondition, infrav1.PrismCentralClientInitializationFailed, capiv1.ConditionSeverityError, err.Error())
 		return ctrl.Result{Requeue: true}, fmt.Errorf("client auth error: %v", err)
@@ -233,7 +237,7 @@ func (r *NutanixMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		Context:        ctx,
 		Cluster:        cluster,
 		Machine:        machine,
-		NutanixCluster: ntxCluster,
+		NutanixCluster: ntnxCluster,
 		NutanixMachine: ntxMachine,
 		LogPrefix:      logPrefix,
 		NutanixClient:  v3Client,

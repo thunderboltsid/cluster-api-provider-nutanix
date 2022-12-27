@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	prismgoclient "github.com/nutanix-cloud-native/prism-go-client"
 	"github.com/nutanix-cloud-native/prism-go-client/environment"
@@ -43,19 +44,33 @@ const (
 	capxNamespaceKey    = "POD_NAMESPACE"
 )
 
-type NutanixClientHelper struct {
+var _ PrismClientWrapperInterface = &PrismClientWrapper{}
+
+// PrismClientWrapperInterface defines methods that are used by the controllers.
+// Here we can abstract out the methods as verbs where the underlying implementation can be swapped out by a v4 client
+// in the future.
+type PrismClientWrapperInterface interface {
+	GetClientFromEnvironment(*infrav1.NutanixCluster) (*nutanixClientV3.Client, error)
+}
+
+// PrismClientWrapper wraps the nutanix client and provides helper methods that are used by the controllers.
+type PrismClientWrapper struct {
+	rwmutex           *sync.RWMutex
+	v3ClientMap       map[string]*nutanixClientV3.Client
 	secretInformer    coreinformers.SecretInformer
 	configMapInformer coreinformers.ConfigMapInformer
 }
 
-func NewNutanixClientHelper(secretInformer coreinformers.SecretInformer, cmInformer coreinformers.ConfigMapInformer) (*NutanixClientHelper, error) {
-	return &NutanixClientHelper{
+func NewNutanixClientWrapper(secretInformer coreinformers.SecretInformer, cmInformer coreinformers.ConfigMapInformer) *PrismClientWrapper {
+	return &PrismClientWrapper{
 		secretInformer:    secretInformer,
 		configMapInformer: cmInformer,
-	}, nil
+		rwmutex:           &sync.RWMutex{},
+		v3ClientMap:       make(map[string]*nutanixClientV3.Client),
+	}
 }
 
-func (n *NutanixClientHelper) GetClientFromEnvironment(nutanixCluster *infrav1.NutanixCluster) (*nutanixClientV3.Client, error) {
+func (n *PrismClientWrapper) GetClientFromEnvironment(nutanixCluster *infrav1.NutanixCluster) (*nutanixClientV3.Client, error) {
 	// Create a list of env providers
 	providers := make([]envTypes.Provider, 0)
 
@@ -132,10 +147,35 @@ func (n *NutanixClientHelper) GetClientFromEnvironment(nutanixCluster *infrav1.N
 		Password: me.ApiCredentials.Password,
 	}
 
-	return n.GetClient(creds, me.AdditionalTrustBundle)
+	return GetClient(creds, me.AdditionalTrustBundle)
 }
 
-func (n *NutanixClientHelper) GetClient(cred prismgoclient.Credentials, additionalTrustBundle string) (*nutanixClientV3.Client, error) {
+func (n *PrismClientWrapper) getManagerNutanixPrismEndpoint() (*credentialTypes.NutanixPrismEndpoint, error) {
+	npe := &credentialTypes.NutanixPrismEndpoint{}
+	config, err := n.readEndpointConfig()
+	if err != nil {
+		return npe, err
+	}
+	if err = json.Unmarshal(config, npe); err != nil {
+		return npe, err
+	}
+	if npe.CredentialRef == nil {
+		return nil, fmt.Errorf("credentialRef must be set on CAPX manager")
+	}
+	return npe, nil
+}
+
+func (n *PrismClientWrapper) readEndpointConfig() ([]byte, error) {
+	if b, err := os.ReadFile(filepath.Join(configPath, endpointKey)); err == nil {
+		return b, err
+	} else if os.IsNotExist(err) {
+		return []byte{}, nil
+	} else {
+		return []byte{}, err
+	}
+}
+
+func GetClient(cred prismgoclient.Credentials, additionalTrustBundle string) (*nutanixClientV3.Client, error) {
 	if cred.Username == "" {
 		errorMsg := fmt.Errorf("could not create client because username was not set")
 		klog.Error(errorMsg)
@@ -170,31 +210,6 @@ func (n *NutanixClientHelper) GetClient(cred prismgoclient.Credentials, addition
 	}
 
 	return cli, nil
-}
-
-func (n *NutanixClientHelper) getManagerNutanixPrismEndpoint() (*credentialTypes.NutanixPrismEndpoint, error) {
-	npe := &credentialTypes.NutanixPrismEndpoint{}
-	config, err := n.readEndpointConfig()
-	if err != nil {
-		return npe, err
-	}
-	if err = json.Unmarshal(config, npe); err != nil {
-		return npe, err
-	}
-	if npe.CredentialRef == nil {
-		return nil, fmt.Errorf("credentialRef must be set on CAPX manager")
-	}
-	return npe, nil
-}
-
-func (n *NutanixClientHelper) readEndpointConfig() ([]byte, error) {
-	if b, err := os.ReadFile(filepath.Join(configPath, endpointKey)); err == nil {
-		return b, err
-	} else if os.IsNotExist(err) {
-		return []byte{}, nil
-	} else {
-		return []byte{}, err
-	}
 }
 
 func GetCredentialRefForCluster(nutanixCluster *infrav1.NutanixCluster) (*credentialTypes.NutanixCredentialReference, error) {

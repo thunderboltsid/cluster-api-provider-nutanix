@@ -128,8 +128,7 @@ func initNutanixClient(e2eConfig clusterctl.E2EConfig) (*prismGoClientV3.Client,
 		}
 		trustBundle = string(decodedCert)
 	}
-	nch := nutanixClientHelper.NutanixClientHelper{}
-	nutanixClient, err := nch.GetClient(*creds, trustBundle)
+	nutanixClient, err := nutanixClientHelper.GetClient(*creds, trustBundle)
 	if err != nil {
 		return nil, err
 	}
