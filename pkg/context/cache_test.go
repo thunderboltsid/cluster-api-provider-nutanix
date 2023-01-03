@@ -1,29 +1,60 @@
 package context
 
 import (
-	"context"
+	"github.com/keploy/go-sdk/integrations/khttpclient"
+	"github.com/keploy/go-sdk/keploy"
+	"github.com/keploy/go-sdk/mock"
+	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
+	"os/user"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestGetRemoteClient(t *testing.T) {
+func TestRemoteClientCache(t *testing.T) {
 	clusterKey := apitypes.NamespacedName{
-		Namespace: "test-namespace",
-		Name:      "test-cluster",
+		Namespace: "capx-test-ns",
+		Name:      "mycluster",
 	}
-	cfg := &rest.Config{}
+
+	// get absolute path for a relative directory path
+	usr, err := user.Current()
+	require.NoError(t, err)
+
+	kubeconfigPath := filepath.Join(usr.HomeDir, ".kube/config")
+	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	require.NoError(t, err)
+
+	mockConf := mock.Config{
+		Mode: keploy.MODE_TEST,
+		Name: t.Name(),
+	}
+
+	ctx := mock.NewContext(mockConf)
+	cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		interceptor := khttpclient.NewInterceptor(rt)
+		interceptor.SetContext(ctx)
+		return interceptor
+	}
+
 	kclnt, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
-	c, err := GetRemoteClient(context.Background(), kclnt, clusterKey)
+
+	// create a new remote client as one doesn't exist
+	c, err := GetRemoteClient(ctx, kclnt, clusterKey)
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
-}
 
-func TestRemoveRemoteClient(t *testing.T) {
-	t.Log("TODO: Implement")
+	// get the remote client from the cache
+	c, err = GetRemoteClient(ctx, kclnt, clusterKey)
+	assert.NoError(t, err)
+	assert.NotNil(t, c)
+
+	// remove the remote client from the cache
+	RemoveRemoteClient(clusterKey)
 }
