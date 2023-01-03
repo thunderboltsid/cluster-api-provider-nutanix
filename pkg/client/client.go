@@ -61,7 +61,7 @@ type PrismClientWrapper struct {
 	configMapInformer coreinformers.ConfigMapInformer
 }
 
-func NewNutanixClientWrapper(secretInformer coreinformers.SecretInformer, cmInformer coreinformers.ConfigMapInformer) *PrismClientWrapper {
+func NewNutanixClientWrapper(secretInformer coreinformers.SecretInformer, cmInformer coreinformers.ConfigMapInformer) PrismClientWrapperInterface {
 	return &PrismClientWrapper{
 		secretInformer:    secretInformer,
 		configMapInformer: cmInformer,
@@ -131,14 +131,13 @@ func (n *PrismClientWrapper) GetClientFromEnvironment(nutanixCluster *infrav1.Nu
 		n.configMapInformer))
 
 	// init env with providers
-	env := environment.NewEnvironment(
-		providers...,
-	)
+	env := environment.NewEnvironment(providers...)
 	// fetch endpoint details
 	me, err := env.GetManagementEndpoint(envTypes.Topology{})
 	if err != nil {
 		return nil, err
 	}
+
 	creds := prismgoclient.Credentials{
 		URL:      me.Address.Host,
 		Endpoint: me.Address.Host,
@@ -146,13 +145,12 @@ func (n *PrismClientWrapper) GetClientFromEnvironment(nutanixCluster *infrav1.Nu
 		Username: me.ApiCredentials.Username,
 		Password: me.ApiCredentials.Password,
 	}
-
 	return GetClient(creds, me.AdditionalTrustBundle)
 }
 
 func (n *PrismClientWrapper) getManagerNutanixPrismEndpoint() (*credentialTypes.NutanixPrismEndpoint, error) {
 	npe := &credentialTypes.NutanixPrismEndpoint{}
-	config, err := n.readEndpointConfig()
+	config, err := readEndpointConfig()
 	if err != nil {
 		return npe, err
 	}
@@ -165,7 +163,7 @@ func (n *PrismClientWrapper) getManagerNutanixPrismEndpoint() (*credentialTypes.
 	return npe, nil
 }
 
-func (n *PrismClientWrapper) readEndpointConfig() ([]byte, error) {
+func readEndpointConfig() ([]byte, error) {
 	if b, err := os.ReadFile(filepath.Join(configPath, endpointKey)); err == nil {
 		return b, err
 	} else if os.IsNotExist(err) {

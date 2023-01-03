@@ -41,8 +41,6 @@ const (
 
 // DeleteVM deletes a VM and is invoked by the NutanixMachineReconciler
 func DeleteVM(ctx context.Context, client *nutanixClientV3.Client, vmName, vmUUID string) (string, error) {
-	var err error
-
 	if vmUUID == "" {
 		klog.Warning("VmUUID was empty. Skipping delete")
 		return "", nil
@@ -77,8 +75,8 @@ func FindVMByUUID(ctx context.Context, client *nutanixClientV3.Client, uuid stri
 	return response, nil
 }
 
-// GenerateProviderID generates a provider ID for the given resource UUID
-func GenerateProviderID(uuid string) string {
+// generateProviderID generates a provider ID for the given resource UUID
+func generateProviderID(uuid string) string {
 	return fmt.Sprintf("%s%s", providerIdPrefix, uuid)
 }
 
