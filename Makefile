@@ -313,7 +313,7 @@ run-keploy: $(KEPLOY)
 
 .PHONY: test-unittest
 test-unittest: manifests generate fmt vet setup-envtest ## Run unit tests.
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION)  --arch=amd64 -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION)  --arch=amd64 -p path)" go test ./pkg/... ./controllers/... -coverprofile cover.out
 
 .PHONY: test-clusterctl-create
 test-clusterctl-create: ## Run the tests using clusterctl
