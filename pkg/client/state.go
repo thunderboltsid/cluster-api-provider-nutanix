@@ -69,8 +69,7 @@ func GetTaskState(ctx context.Context, client *nutanixClientV3.Client, taskUUID 
 	}
 
 	if *v.Status == "INVALID_UUID" || *v.Status == "FAILED" {
-		return *v.Status,
-			fmt.Errorf("error_detail: %s, progress_message: %s", utils.StringValue(v.ErrorDetail), utils.StringValue(v.ProgressMessage))
+		return *v.Status, fmt.Errorf("error_detail: %s, progress_message: %s", utils.StringValue(v.ErrorDetail), utils.StringValue(v.ProgressMessage))
 	}
 	taskStatus := *v.Status
 	klog.Infof("Status for task with UUID %s: %s", taskUUID, taskStatus)
@@ -97,7 +96,7 @@ func retry(initialInterval float64, maxInterval float64, numTries uint, function
 	if maxInterval == 0 {
 		maxInterval = math.Inf(1)
 	} else if initialInterval < 0 || initialInterval > maxInterval {
-		return fmt.Errorf("Invalid retry intervals (negative or initial < max). Initial: %f, Max: %f.", initialInterval, maxInterval)
+		return fmt.Errorf("invalid retry intervals (negative or initial < max). Initial: %f, Max: %f", initialInterval, maxInterval)
 	}
 
 	var err error
@@ -117,7 +116,7 @@ func retry(initialInterval float64, maxInterval float64, numTries uint, function
 	}
 
 	if !done {
-		return fmt.Errorf("Function never succeeded in retry")
+		return fmt.Errorf("function never succeeded in retry")
 	}
 	return nil
 }
