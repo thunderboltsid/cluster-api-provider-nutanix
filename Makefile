@@ -309,11 +309,16 @@ prepare-local-clusterctl: manifests kustomize cluster-templates ## Prepare overi
 
 .PHONY: run-keploy
 run-keploy: $(KEPLOY)
-	$(KEPLOY) run
+	$(KEPLOY) run &
+
+.PHONY: stop-keploy
+stop-keploy:
+	@-pkill "$(KEPLOY_BIN)-$(KEPLOY_VERSION)"
 
 .PHONY: test-unittest
-test-unittest: manifests generate fmt vet setup-envtest ## Run unit tests.
+test-unittest: manifests generate fmt vet setup-envtest run-keploy ## Run unit tests.
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION)  --arch=amd64 -p path)" go test ./pkg/... ./controllers/... -coverprofile cover.out
+	@$(MAKE) stop-keploy
 
 .PHONY: test-clusterctl-create
 test-clusterctl-create: ## Run the tests using clusterctl

@@ -5,16 +5,14 @@ go 1.19
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/google/uuid v1.3.0
-	github.com/keploy/go-sdk v0.6.6
+	github.com/keploy/go-sdk v0.7.2
 	github.com/nutanix-cloud-native/prism-go-client v0.3.4
 	github.com/onsi/ginkgo/v2 v2.2.0
 	github.com/onsi/gomega v1.20.2
-	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.2
 	k8s.io/api v0.25.2
 	k8s.io/apimachinery v0.25.2
 	k8s.io/client-go v0.25.2
-	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	sigs.k8s.io/cluster-api v1.2.0-beta.0.0.20220823125924-6e30f66cc3df
@@ -113,6 +111,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -140,7 +139,7 @@ require (
 	github.com/xdg-go/scram v1.1.0 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	go.keploy.io/server v0.7.8 // indirect
+	go.keploy.io/server v0.7.12 // indirect
 	go.mongodb.org/mongo-driver v1.8.3 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
@@ -176,5 +175,3 @@ require (
 )
 
 replace golang.org/x/net v0.0.0-20220812174116-3211cb980234 => golang.org/x/net v0.0.0-20220906165146-f3363e06e74c
-
-replace github.com/keploy/go-sdk v0.6.6 => github.com/thunderboltsid/keploy-go-sdk v0.0.0-20230103001019-4256cda79ac1
