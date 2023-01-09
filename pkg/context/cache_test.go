@@ -1,9 +1,9 @@
 package context
 
 import (
-	"net/http"
-	"os/user"
+	"k8s.io/client-go/rest"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"testing"
 
 	"github.com/keploy/go-sdk/integrations/khttpclient"
@@ -24,12 +24,12 @@ func TestRemoteClientCache(t *testing.T) {
 	}
 
 	// get absolute path for a relative directory path
-	usr, err := user.Current()
-	require.NoError(t, err)
-
-	kubeconfigPath := filepath.Join(usr.HomeDir, ".kube/config")
+	kubeconfigPath := filepath.Join("testdata", "kube.config")
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	require.NoError(t, err)
+	rt, err := rest.TransportFor(cfg)
+	require.NoError(t, err)
+	cfg.TLSClientConfig = rest.TLSClientConfig{}
 
 	mockConf := mock.Config{
 		Mode: keploy.MODE_TEST,
@@ -37,13 +37,19 @@ func TestRemoteClientCache(t *testing.T) {
 	}
 
 	ctx := mock.NewContext(mockConf)
-	cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-		interceptor := khttpclient.NewInterceptor(rt)
-		interceptor.SetContext(ctx)
-		return interceptor
-	}
+	interceptor := khttpclient.NewInterceptor(rt)
+	interceptor.SetContext(ctx)
+	cfg.Transport = interceptor
+	//cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+	//	return interceptor
+	//}
 
-	kclnt, err := client.New(cfg, client.Options{})
+	mapper, err := apiutil.NewDynamicRESTMapper(cfg, apiutil.WithLazyDiscovery)
+	require.NoError(t, err)
+	copts := client.Options{
+		Mapper: mapper,
+	}
+	kclnt, err := client.New(cfg, copts)
 	require.NoError(t, err)
 
 	// create a new remote client as one doesn't exist

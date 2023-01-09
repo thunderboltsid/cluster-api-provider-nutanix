@@ -116,7 +116,7 @@ GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN))
 GOLANGCI_LINT_PKG := github.com/golangci/golangci-lint/cmd/golangci-lint
 
-KEPLOY_VER := v0.7.8
+KEPLOY_VER := v0.7.13
 KEPLOY_BIN := server
 KEPLOY := $(abspath $(TOOLS_BIN_DIR)/$(KEPLOY_BIN)-$(KEPLOY_VER))
 KEPLOY_PKG := go.keploy.io/server/cmd/server
@@ -313,7 +313,7 @@ run-keploy: $(KEPLOY)
 
 .PHONY: stop-keploy
 stop-keploy:
-	@-pkill "$(KEPLOY_BIN)-$(KEPLOY_VERSION)"
+	@-pkill "$(KEPLOY_BIN)-$(KEPLOY_VER)"
 
 .PHONY: test-unittest
 test-unittest: manifests generate fmt vet setup-envtest run-keploy ## Run unit tests.
